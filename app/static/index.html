@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clasificador de hojas de limón | ResNet50</title>
+  <style>
+    :root { color-scheme: light; --ink: #17221c; --muted: #617067; --line: #dfe7e1; --green: #23734b; --pale: #f2f7f3; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: #f7faf7; color: var(--ink); font: 16px/1.5 system-ui, -apple-system, Segoe UI, sans-serif; }
+    main { width: min(760px, calc(100% - 32px)); margin: 48px auto; }
+    .eyebrow { color: var(--green); font-size: .78rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    h1 { margin: 8px 0 10px; font-size: clamp(2rem, 5vw, 3rem); line-height: 1.08; }
+    .intro { max-width: 620px; color: var(--muted); }
+    .panel { margin-top: 28px; padding: 28px; border: 1px solid var(--line); border-radius: 20px; background: white; box-shadow: 0 12px 36px rgba(25, 55, 35, .06); }
+    .drop { display: grid; min-height: 230px; place-items: center; padding: 22px; border: 2px dashed #b8cbbd; border-radius: 15px; background: var(--pale); text-align: center; cursor: pointer; }
+    .drop:hover { border-color: var(--green); }
+    .drop strong { display: block; margin-bottom: 4px; }
+    .drop span { color: var(--muted); font-size: .9rem; }
+    input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+    #preview { display: none; max-width: 100%; max-height: 260px; margin: 16px auto 0; border-radius: 12px; }
+    button { width: 100%; margin-top: 18px; padding: 13px 18px; border: 0; border-radius: 10px; background: var(--green); color: white; font: inherit; font-weight: 700; cursor: pointer; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    #message { min-height: 24px; margin-top: 12px; color: var(--muted); text-align: center; }
+    #result { display: none; margin-top: 20px; padding: 20px; border-radius: 14px; background: var(--pale); }
+    #result h2 { margin: 0 0 4px; font-size: 1.35rem; }
+    .confidence { color: var(--green); font-size: 1.7rem; font-weight: 800; }
+    .prob { display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; color: var(--muted); font-size: .92rem; }
+    .foot { margin-top: 20px; color: var(--muted); font-size: .82rem; text-align: center; }
+    a { color: var(--green); }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="eyebrow">Proyecto de visión artificial · ResNet50</div>
+    <h1>Clasificador de hojas de limón</h1>
+    <p class="intro">Carga una fotografía de una hoja de limón para obtener una predicción del modelo entre dos categorías: hoja enferma y hoja sana.</p>
+
+    <section class="panel" aria-label="Carga de imagen">
+      <label class="drop" for="imageFile">
+        <div>
+          <strong>Selecciona una fotografía</strong>
+          <span>Formatos de imagen compatibles · Máximo 10 MB</span>
+          <img id="preview" alt="Vista previa de la imagen seleccionada">
+        </div>
+      </label>
+      <input id="imageFile" type="file" accept="image/*">
+      <button id="predictButton" disabled>Clasificar hoja</button>
+      <div id="message" role="status" aria-live="polite">Selecciona una imagen para comenzar.</div>
+      <div id="result" aria-live="polite">
+        <h2 id="className"></h2>
+        <div class="confidence" id="confidence"></div>
+        <div class="prob"><span>Hoja enferma</span><strong id="diseased"></strong></div>
+        <div class="prob"><span>Hoja sana</span><strong id="healthy"></strong></div>
+      </div>
+    </section>
+    <p class="foot">Esta herramienta es un prototipo académico de clasificación. No sustituye una evaluación agronómica.</p>
+    <p class="foot"><a href="/docs">Consultar documentación interactiva de la API</a></p>
+  </main>
+  <script>
+    const input = document.getElementById('imageFile');
+    const button = document.getElementById('predictButton');
+    const message = document.getElementById('message');
+    const preview = document.getElementById('preview');
+    const result = document.getElementById('result');
+    let selectedFile = null;
+
+    input.addEventListener('change', () => {
+      selectedFile = input.files?.[0] || null;
+      result.style.display = 'none';
+      if (!selectedFile) {
+        button.disabled = true;
+        preview.style.display = 'none';
+        message.textContent = 'Selecciona una imagen para comenzar.';
+        return;
+      }
+      if (!selectedFile.type.startsWith('image/')) {
+        button.disabled = true;
+        message.textContent = 'El archivo seleccionado no parece ser una imagen.';
+        return;
+      }
+      if (selectedFile.size > 10 * 1024 * 1024) {
+        button.disabled = true;
+        message.textContent = 'La imagen supera el límite de 10 MB.';
+        return;
+      }
+      preview.src = URL.createObjectURL(selectedFile);
+      preview.style.display = 'block';
+      button.disabled = false;
+      message.textContent = selectedFile.name;
+    });
+
+    button.addEventListener('click', async () => {
+      if (!selectedFile) return;
+      const body = new FormData();
+      body.append('file', selectedFile);
+      button.disabled = true;
+      message.textContent = 'Analizando imagen…';
+      result.style.display = 'none';
+      try {
+        const response = await fetch('/predict', { method: 'POST', body });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || 'No fue posible clasificar la imagen.');
+        document.getElementById('className').textContent = data.class;
+        document.getElementById('confidence').textContent = `${(data.confidence * 100).toFixed(2)}% de confianza`;
+        document.getElementById('diseased').textContent = `${(data.probabilities.diseased * 100).toFixed(2)}%`;
+        document.getElementById('healthy').textContent = `${(data.probabilities.healthy * 100).toFixed(2)}%`;
+        result.style.display = 'block';
+        message.textContent = 'Análisis completado.';
+      } catch (error) {
+        message.textContent = error.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

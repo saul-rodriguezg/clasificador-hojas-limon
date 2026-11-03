@@ -1,0 +1,17 @@
+{
+  "name": "Limon ResNet50 API",
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "enableNonRootDocker": true
+    }
+  },
+  "forwardPorts": [8000],
+  "portsAttributes": {
+    "8000": {
+      "label": "API y frontend",
+      "onAutoForward": "openBrowser"
+    }
+  }
+}

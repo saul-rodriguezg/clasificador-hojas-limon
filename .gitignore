@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+.env
+.DS_Store
+# El modelo se entrega en el ZIP y se publica en Hugging Face Hub para el despliegue.
+models/*.keras
+models/*.h5
+!models/.gitkeep

@@ -1,0 +1,15 @@
+# Backend HTTP
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.30,<1.0
+python-multipart>=0.0.9
+pillow>=10,<13
+numpy>=1.26,<3
+
+# Versiones registradas en el entorno de Colab que generó el modelo .keras.
+# Se fijan para maximizar la compatibilidad de serialización al cargarlo.
+tensorflow-cpu==2.21.0
+keras==3.13.2
+keras-hub==0.26.0
+
+# Descarga opcional del modelo desde Hugging Face Hub.
+huggingface_hub>=0.20,<2

@@ -1,0 +1,17 @@
+services:
+  clasificador-limon:
+    build: .
+    container_name: clasificador-limon
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      MODEL_PATH: /app/models/ResNet50.keras
+      IMAGE_SIZE: "224"
+      MAX_UPLOAD_MB: "10"
+      PORT: "8000"
+      HF_REPO_ID: ${HF_REPO_ID:-}
+      HF_MODEL_FILENAME: ${HF_MODEL_FILENAME:-ResNet50.keras}
+      HF_TOKEN: ${HF_TOKEN:-}
+    volumes:
+      - ./models:/app/models:ro
+    restart: unless-stopped
